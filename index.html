@@ -33,7 +33,7 @@
 <div id="phaseLabel" aria-hidden="true"></div>
 
 <audio id="ramadenMusic" loop>
-  <source src="https://assets.pixabay.com/audio/2023/10/12/audio_c8b00b0e88.mp3" type="audio/mpeg">
+  <source src="music.mp3" type="audio/mpeg">
 </audio>
 
 <script type="importmap">
@@ -45,25 +45,8 @@
 }
 </script>
 
-<script type="module">
-import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { FontLoader } from 'three/addons/loaders/FontLoader.js';
-import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
-import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
-
-const PARTNER_NAME = "Premii 🤍";
-
-function sanitizeFor3DText(s) {
-  return String(s)
-    .replace(/[^\x20-\x7E]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-</script>
 <script type="module" src="script.js"></script>
 
 </body>
 </html>
+ 

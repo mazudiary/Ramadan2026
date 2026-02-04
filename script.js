@@ -1,3 +1,20 @@
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { FontLoader } from 'three/addons/loaders/FontLoader.js';
+import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+
+const PARTNER_NAME = "Premii 🤍";
+
+function sanitizeFor3DText(s) {
+  return String(s)
+    .replace(/[^\x20-\x7E]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 const PARTNER_NAME_3D = sanitizeFor3DText(PARTNER_NAME) || 'My Love';
 
 const hintEl = document.getElementById("hint");
@@ -886,6 +903,8 @@ function startStory(){
   started = true;
 
   overlayEl.style.opacity=0;
+  infoBtn.style.opacity = 1;
+  infoBtn.style.pointerEvents = 'auto';
   setTimeout(()=>overlayEl.remove(),1200);
   hintEl.style.opacity = 1;
   setMoonPhase(PHASES[phaseIndex].t, PHASES[phaseIndex].name);
@@ -897,18 +916,17 @@ function startStory(){
   lanterns.forEach(l=>l.visible=true);
 
   revealFinalTextAfterFullMoon = true;
-
-  // Play Ramadan music
-  const ramadenMusic = document.getElementById('ramadenMusic');
-  if (ramadenMusic) {
-    ramadenMusic.volume = 0.4;
-    ramadenMusic.play().catch(err => console.log('Music autoplay blocked:', err));
-  }
 }
 
 startBtn.addEventListener('pointerdown', (e) => {
   e.preventDefault();
   e.stopPropagation();
+  // Play audio before starting story to ensure user interaction is registered
+  const ramadenMusic = document.getElementById('ramadenMusic');
+  if (ramadenMusic) {
+    ramadenMusic.volume = 0.4;
+    ramadenMusic.play().catch(err => console.log('Music play error:', err));
+  }
   startStory();
 }, { passive: false });
 
