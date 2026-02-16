@@ -171,6 +171,9 @@ function renderDuaView() {
 function renderNameInputView() {
   const html = `
     <div style="text-align:center;">
+      <p style="margin:0 0 14px; color:rgba(255,255,255,0.9); font-size:0.95rem; line-height:1.45;">
+        দু'আ করো। অসম্ভবের জন্য দু'আ করো এবং দেখো আল্লাহ কিভাবে তোমার জন্য তা সম্ভব করে তোলেন, কারণ তাঁর কাছে কিছুই অসম্ভব নয়। যখন তুমি প্রার্থনা করো, তখন তোমার পুরো হৃদয় দিয়ে প্রার্থনা করো এবং নিজেকে নিশ্চিত করো যে আল্লাহ তোমাকে তোমার যা কিছু চাও তা দেবেন, সন্দেহের কোন অবকাশ নেই। এমনকি যদি তুমি মনে করো যে সবকিছুই স্থির হয়ে গেছে এবং কিছুই করা যাবে না, তবুও দু'আ করো।
+      </p>
       <h3 style="margin:0 0 8px; color:rgba(212,175,55,0.95); font-size:1.1rem;">আপনার ভবিষ্যৎ স্বামীর নাম লিখুন</h3>
       <p style="margin:0 0 14px; color:rgba(255,255,255,0.8); font-size:0.95rem;">দোয়ায় তার নাম অন্তর্ভুক্ত হবে</p>
       <input id="husbandNameInput" type="text" placeholder="নাম লিখুন..." />
