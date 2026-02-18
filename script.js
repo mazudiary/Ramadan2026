@@ -147,6 +147,39 @@ const comprehensiveDua = `
 let husbandName = '';
 const phaseLabel = document.getElementById('phaseLabel');
 
+// Autoplay controls for full phase cycle
+let autoPlayEnabled = false;
+let autoPlayPending = false;
+
+function setAutoPlay(next) {
+  autoPlayEnabled = !!next;
+  const btn = document.getElementById('autoPlayBtn');
+  if (btn) btn.textContent = autoPlayEnabled ? '⏸️ Stop Cycle' : '▶️ Auto Cycle';
+  if (autoPlayEnabled && !phaseAnim.active) {
+    // start advancing to next phase
+    window.setTimeout(() => {
+      if (autoPlayEnabled) nextMoonPhase(1);
+    }, 220);
+  }
+}
+
+function toggleAutoPlay() { setAutoPlay(!autoPlayEnabled); }
+
+// insert UI button next to phaseLabel
+try {
+  const autoBtn = document.createElement('button');
+  autoBtn.id = 'autoPlayBtn';
+  autoBtn.type = 'button';
+  autoBtn.title = 'Auto-play full moon phase cycle';
+  autoBtn.style.zIndex = 7;
+  autoBtn.addEventListener('pointerdown', (e) => {
+    e.preventDefault(); e.stopPropagation(); toggleAutoPlay();
+  });
+  // attach later when DOM ready / phaseLabel exists
+  if (phaseLabel && phaseLabel.parentNode) phaseLabel.parentNode.appendChild(autoBtn);
+  else document.body.appendChild(autoBtn);
+} catch (err) { }
+
 function renderDuaView() {
   const html = `
     <div class="bn bnPanel" aria-label="Bangla dua list">
@@ -230,6 +263,25 @@ function renderNotes(mode) {
     return;
   }
 
+  if (mode === 'all') {
+    const storyHtml = storyLines.map((line) => `<p>${line}</p>`).join('');
+    const duaHtml = `<div class="bn bnPanel"><div class="bnTitleRow"><h3>দোয়া ও যিকির</h3></div><ol>${banglaDuaLines.map((t) => `<li>${t}</li>`).join('')}</ol></div>`;
+    const personalHtml = `<div class="bn bnPanel"><div class="bnTitleRow"><h3>জমা করা মুনাজাত</h3></div>${comprehensiveDua.split('\n\n').map(para => `<div class="duaText">${para.split('\n').join('<br>')}</div>`).join('')}</div>`;
+    const wrappedAll = `
+      <div class="storyPanel" aria-label="Story lines">
+        <div class="storyTitleRow">
+          <h3>গল্প / বার্তা</h3>
+          <span class="storyPill">ক্লিক: 🌙 দোয়া</span>
+        </div>
+        ${storyHtml}
+      </div>
+      ${duaHtml}
+      ${personalHtml}
+    `;
+    notesBody.innerHTML = wrappedAll;
+    return;
+  }
+
   const storyHtml = storyLines.map((line) => `<p>${line}</p>`).join('');
   const wrapped = `
     <div class="storyPanel" aria-label="Story lines">
@@ -302,6 +354,22 @@ function openDuaFromMoon() {
   
   setTimeout(() => {
     const panel = notesBody.querySelector('.bnPanel');
+    if (!panel) return;
+    panel.classList.remove('flash');
+    void panel.offsetWidth;
+    panel.classList.add('flash');
+    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 0);
+}
+
+function openFullNotesFromMoon() {
+  husbandName = '';
+  renderNotes('all');
+  notesModal.dataset.open = 'true';
+  notesTitleEl.textContent = 'Prayer / Wish Notes';
+
+  setTimeout(() => {
+    const panel = notesBody.firstElementChild;
     if (!panel) return;
     panel.classList.remove('flash');
     void panel.offsetWidth;
@@ -690,7 +758,138 @@ function setMoonPhase(t, label) {
 function nextMoonPhase(step = 1) {
   phaseIndex = (phaseIndex + step + PHASES.length) % PHASES.length;
   const p = PHASES[phaseIndex];
-  setMoonPhase(p.t, p.name);
+  animatePhaseTo(p.t, 1.2, p.name);
+}
+
+// Phase animation state
+let phaseAnim = {
+  active: false,
+  from: phaseT,
+  to: phaseT,
+  start: 0,
+  duration: 1.2,
+  label: ''
+};
+
+function animatePhaseTo(targetT, duration = 1.0, label, onComplete) {
+  phaseAnim.active = true;
+  phaseAnim.from = phaseT;
+  phaseAnim.to = targetT;
+  phaseAnim.start = performance.now();
+  phaseAnim.duration = Math.max(0.2, duration);
+  phaseAnim.label = label || '';
+  phaseAnim.onComplete = typeof onComplete === 'function' ? onComplete : null;
+
+  // subtle star pulse when changing phase
+  triggerStarPulse();
+  // spawn a couple of shooting stars for flair
+  try {
+    spawnShootingStar();
+    if (Math.random() > 0.5) spawnShootingStar();
+  } catch (err) {}
+}
+
+function updatePhaseAnimation(now) {
+  if (!phaseAnim.active) return false;
+  const elapsed = (now - phaseAnim.start) / 1000;
+  const p = clamp01(elapsed / phaseAnim.duration);
+  const eased = easeInOutCubic(p);
+  const current = phaseAnim.from + (phaseAnim.to - phaseAnim.from) * eased;
+  applyMoonPhase(current, false);
+  // animate halo intensity for a soft glow during transition
+  try {
+    if (moonHalo && moonHalo.material && moonHalo.material.uniforms && moonHalo.material.uniforms.uIntensity) {
+      moonHalo.material.uniforms.uIntensity.value = 0.55 + 0.45 * Math.sin(eased * Math.PI);
+    }
+  } catch (err) {
+    // ignore if material not present
+  }
+  if (p >= 1) {
+    phaseAnim.active = false;
+    setMoonPhase(phaseAnim.to, phaseAnim.label);
+    // call optional completion callback
+    try { if (phaseAnim.onComplete) phaseAnim.onComplete(); } catch (e) {}
+    // if autoplay enabled, advance to next phase after a short pause
+    if (autoPlayEnabled) {
+      window.setTimeout(() => {
+        if (autoPlayEnabled) nextMoonPhase(1);
+      }, 700);
+    }
+    return false;
+  }
+  return true;
+}
+
+// Star pulse helpers
+function triggerStarPulse() {
+  const layers = [starsFar, starsMid, starsNear];
+  layers.forEach((L, i) => {
+    if (!L || !L.material) return;
+    const mat = L.material;
+    mat.userData._pulseStart = performance.now();
+    mat.userData._pulseDur = 800 + i * 120;
+    mat.userData._pulseSize = (mat.size || 0.5) * 1.6;
+    mat.userData._origSize = mat.size || 0.5;
+    mat.userData._origOpacity = typeof mat.opacity === 'number' ? mat.opacity : 0.6;
+  });
+}
+
+// Shooting star effect for transitions
+const shootingStars = [];
+function spawnShootingStar() {
+  const geom = new THREE.SphereGeometry(0.08, 8, 8);
+  const mat = new THREE.MeshBasicMaterial({ color: 0xfff9e6 });
+  const m = new THREE.Mesh(geom, mat);
+  const sx = -Math.random() * 60 - 10;
+  const sy = Math.random() * 30 + 10;
+  m.position.set(sx, sy, -40 + Math.random() * 30);
+  m.userData = {
+    start: performance.now(),
+    duration: 700 + Math.random() * 500,
+    vx: 80 + Math.random() * 80,
+    vy: -40 - Math.random() * 40
+  };
+  scene.add(m);
+  shootingStars.push(m);
+}
+
+function updateShootingStars() {
+  const now = performance.now();
+  for (let i = shootingStars.length - 1; i >= 0; i--) {
+    const s = shootingStars[i];
+    const u = (now - s.userData.start) / s.userData.duration;
+    if (u >= 1) {
+      scene.remove(s);
+      shootingStars.splice(i, 1);
+      continue;
+    }
+    s.position.x = s.position.x + (s.userData.vx * (1 / 60));
+    s.position.y = s.position.y + (s.userData.vy * (1 / 60));
+    s.material.opacity = 1 - u;
+    s.material.transparent = true;
+  }
+}
+
+function updateStarPulses() {
+  const layers = [starsFar, starsMid, starsNear];
+  const now = performance.now();
+  layers.forEach((L, i) => {
+    const mat = L.material;
+    if (!mat.userData._pulseStart) return;
+    const elapsed = now - mat.userData._pulseStart;
+    const dur = mat.userData._pulseDur || 700;
+    const t = clamp01(elapsed / dur);
+    const fade = 1 - easeInOutCubic(t);
+    mat.size = mat.userData._origSize + (mat.userData._pulseSize - mat.userData._origSize) * (1 - fade);
+    mat.opacity = mat.userData._origOpacity + (0.85 - mat.userData._origOpacity) * (1 - fade);
+    mat.needsUpdate = true;
+    if (t >= 1) {
+      mat.size = mat.userData._origSize;
+      mat.opacity = mat.userData._origOpacity;
+      mat.userData._pulseStart = null;
+      mat.needsUpdate = true;
+    }
+  });
 }
 
 moon.material.onBeforeCompile = (shader) => {
@@ -740,7 +939,7 @@ renderer.domElement.addEventListener('pointerdown', (e) => {
   if (hits && hits.length) {
     e.preventDefault();
     e.stopPropagation();
-    openDuaFromMoon();
+    openFullNotesFromMoon();
   }
 }, { passive: false });
 
@@ -957,8 +1156,8 @@ window.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') closeNotes();
   if (e.key === 'i' || e.key === 'I') openNotes('story');
   if (!started) return;
-  if (e.key === 'ArrowRight') nextMoonPhase(1);
-  if (e.key === 'ArrowLeft') nextMoonPhase(-1);
+  if (e.key === 'ArrowRight') { setAutoPlay(false); nextMoonPhase(1); }
+  if (e.key === 'ArrowLeft') { setAutoPlay(false); nextMoonPhase(-1); }
 });
 
 const clock=new THREE.Clock();
@@ -973,6 +1172,14 @@ function loop(){
 
   rafId = requestAnimationFrame(loop);
   const t=clock.getElapsedTime();
+  const nowPerf = performance.now();
+
+  // update any running phase animation
+  updatePhaseAnimation(nowPerf);
+  // update star pulses
+  updateStarPulses();
+  // update shooting stars
+  updateShootingStars();
 
   if (fullMoonMode) {
     const elapsed = (performance.now() - fullMoonStartTime) / 1000;

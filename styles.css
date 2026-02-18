@@ -512,3 +512,22 @@ html,body{
   z-index: 6;
   pointer-events:none;
 }
+
+#autoPlayBtn{
+  position: fixed;
+  top: calc(12px + env(safe-area-inset-top));
+  left: calc(12px + env(safe-area-inset-left) + 160px);
+  padding:8px 12px;
+  border-radius:12px;
+  border:1px solid rgba(212,175,55,.28);
+  background: rgba(0,0,0,0.22);
+  color:#ffdca6;
+  font-size:0.82rem;
+  cursor:pointer;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 7;
+  transition: transform .15s ease, background .15s ease, opacity .2s ease;
+}
+
+#autoPlayBtn:hover{ transform: translateY(-2px); background: rgba(212,175,55,0.08); }
