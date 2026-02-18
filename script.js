@@ -68,7 +68,6 @@ const banglaDuaLines = [
   'লা ইলাহা ইল্লাল্লাহু মুহাম্মাদুর রাসূলুল্লাহ সাঃ (৩ বার)',
   'লা ইলাহা ইল্লাল্লাহু ওয়াহদাহু লা শারিকালাহু আহাদান ছামাদান লাম ইয়ালিদ ওয়ালাম ইয়ুলাদ ওয়ালাম ইয়া কুল্লাহু কুফুওয়ান আহাদ (৩ বার)',
   "আস্তাগফিরুল্লাহ্-হাল্লাজি লা ইলাহা ইল্লা হুওয়াল হাইয়্যুল কাইয়্যুম ওয়া আতুবু ইলাইহি, লা হাওলা ওয়ালা কুয়্যাতা ইল্লা বিল্লাহিল আলিয়্যিল আযী'ম (৩ বার)",
-  'আল্লাহুম্মা ইন্নি আফুউন তুহিব্বুল আফওয়া ফাফু আন্নী',
   'আলহামদুলিল্লাহ'
 ];
 
@@ -147,39 +146,6 @@ const comprehensiveDua = `
 
 let husbandName = '';
 const phaseLabel = document.getElementById('phaseLabel');
-
-// Autoplay controls for full phase cycle
-let autoPlayEnabled = false;
-let autoPlayPending = false;
-
-function setAutoPlay(next) {
-  autoPlayEnabled = !!next;
-  const btn = document.getElementById('autoPlayBtn');
-  if (btn) btn.textContent = autoPlayEnabled ? '⏸️ Stop Cycle' : '▶️ Auto Cycle';
-  if (autoPlayEnabled && !phaseAnim.active) {
-    // start advancing to next phase
-    window.setTimeout(() => {
-      if (autoPlayEnabled) nextMoonPhase(1);
-    }, 220);
-  }
-}
-
-function toggleAutoPlay() { setAutoPlay(!autoPlayEnabled); }
-
-// insert UI button next to phaseLabel
-try {
-  const autoBtn = document.createElement('button');
-  autoBtn.id = 'autoPlayBtn';
-  autoBtn.type = 'button';
-  autoBtn.title = 'Auto-play full moon phase cycle';
-  autoBtn.style.zIndex = 7;
-  autoBtn.addEventListener('pointerdown', (e) => {
-    e.preventDefault(); e.stopPropagation(); toggleAutoPlay();
-  });
-  // attach later when DOM ready / phaseLabel exists
-  if (phaseLabel && phaseLabel.parentNode) phaseLabel.parentNode.appendChild(autoBtn);
-  else document.body.appendChild(autoBtn);
-} catch (err) { }
 
 function renderDuaView() {
   const html = `
@@ -264,25 +230,6 @@ function renderNotes(mode) {
     return;
   }
 
-  if (mode === 'all') {
-    const storyHtml = storyLines.map((line) => `<p>${line}</p>`).join('');
-    const duaHtml = `<div class="bn bnPanel"><div class="bnTitleRow"><h3>দোয়া ও যিকির</h3></div><ol>${banglaDuaLines.map((t) => `<li>${t}</li>`).join('')}</ol></div>`;
-    const personalHtml = `<div class="bn bnPanel"><div class="bnTitleRow"><h3>জমা করা মুনাজাত</h3></div>${comprehensiveDua.split('\n\n').map(para => `<div class="duaText">${para.split('\n').join('<br>')}</div>`).join('')}</div>`;
-    const wrappedAll = `
-      <div class="storyPanel" aria-label="Story lines">
-        <div class="storyTitleRow">
-          <h3>গল্প / বার্তা</h3>
-          <span class="storyPill">ক্লিক: 🌙 দোয়া</span>
-        </div>
-        ${storyHtml}
-      </div>
-      ${duaHtml}
-      ${personalHtml}
-    `;
-    notesBody.innerHTML = wrappedAll;
-    return;
-  }
-
   const storyHtml = storyLines.map((line) => `<p>${line}</p>`).join('');
   const wrapped = `
     <div class="storyPanel" aria-label="Story lines">
@@ -355,22 +302,6 @@ function openDuaFromMoon() {
   
   setTimeout(() => {
     const panel = notesBody.querySelector('.bnPanel');
-    if (!panel) return;
-    panel.classList.remove('flash');
-    void panel.offsetWidth;
-    panel.classList.add('flash');
-    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, 0);
-}
-
-function openFullNotesFromMoon() {
-  husbandName = '';
-  renderNotes('all');
-  notesModal.dataset.open = 'true';
-  notesTitleEl.textContent = 'Prayer / Wish Notes';
-
-  setTimeout(() => {
-    const panel = notesBody.firstElementChild;
     if (!panel) return;
     panel.classList.remove('flash');
     void panel.offsetWidth;
@@ -772,14 +703,13 @@ let phaseAnim = {
   label: ''
 };
 
-function animatePhaseTo(targetT, duration = 1.0, label, onComplete) {
+function animatePhaseTo(targetT, duration = 1.0, label) {
   phaseAnim.active = true;
   phaseAnim.from = phaseT;
   phaseAnim.to = targetT;
   phaseAnim.start = performance.now();
   phaseAnim.duration = Math.max(0.2, duration);
   phaseAnim.label = label || '';
-  phaseAnim.onComplete = typeof onComplete === 'function' ? onComplete : null;
 
   // subtle star pulse when changing phase
   triggerStarPulse();
@@ -808,14 +738,6 @@ function updatePhaseAnimation(now) {
   if (p >= 1) {
     phaseAnim.active = false;
     setMoonPhase(phaseAnim.to, phaseAnim.label);
-    // call optional completion callback
-    try { if (phaseAnim.onComplete) phaseAnim.onComplete(); } catch (e) {}
-    // if autoplay enabled, advance to next phase after a short pause
-    if (autoPlayEnabled) {
-      window.setTimeout(() => {
-        if (autoPlayEnabled) nextMoonPhase(1);
-      }, 700);
-    }
     return false;
   }
   return true;
@@ -940,7 +862,7 @@ renderer.domElement.addEventListener('pointerdown', (e) => {
   if (hits && hits.length) {
     e.preventDefault();
     e.stopPropagation();
-    openFullNotesFromMoon();
+    openDuaFromMoon();
   }
 }, { passive: false });
 
@@ -1157,8 +1079,8 @@ window.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') closeNotes();
   if (e.key === 'i' || e.key === 'I') openNotes('story');
   if (!started) return;
-  if (e.key === 'ArrowRight') { setAutoPlay(false); nextMoonPhase(1); }
-  if (e.key === 'ArrowLeft') { setAutoPlay(false); nextMoonPhase(-1); }
+  if (e.key === 'ArrowRight') nextMoonPhase(1);
+  if (e.key === 'ArrowLeft') nextMoonPhase(-1);
 });
 
 const clock=new THREE.Clock();
@@ -1281,4 +1203,3 @@ window.addEventListener("resize",()=>{
   controls.enableRotate = !isSmallScreen;
   controls.enableZoom = !isSmallScreen;
 });
-
